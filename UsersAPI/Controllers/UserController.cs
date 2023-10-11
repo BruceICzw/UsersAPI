@@ -1,7 +1,7 @@
 ﻿using Dapper;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
+using System.Linq.Expressions;
 using UsersAPI.Models;
 
 namespace UsersAPI.Controllers
@@ -10,11 +10,7 @@ namespace UsersAPI.Controllers
     [ApiController]
     public class UserController : ControllerBase
     {
-        private readonly IConfiguration _config;
-        public UserController( IConfiguration config) {
-            _config = config;
-
-        }
+        
         [HttpGet]
         public async Task<ActionResult<List<User>>> GetAllUsers()
         {
@@ -26,9 +22,22 @@ namespace UsersAPI.Controllers
         [HttpGet("{userId}")]
         public async Task<ActionResult<User>> GetUser(int userId)
         {
-            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-            var user = await connection.QueryFirstAsync("Select * from users where id=@Id", new {Id = userId });
-            return Ok(user);
+            try
+            {
+                using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+                var user = await connection.QueryFirstAsync("Select * from users where id=@Id", new { Id = userId });
+
+                
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message)
+                 ;
+             
+            }
+           
+       
         }
 
         [HttpPost]
@@ -49,9 +58,19 @@ namespace UsersAPI.Controllers
         [HttpDelete("{userId}")]
         public async Task<ActionResult<List<User>>> DeleteUser(int userId)
         {
-            using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
-            _ = await connection.ExecuteAsync("delete from users where id = @Id", new { Id = userId });
-            return Ok(await SelectAllUsers(connection));
+            try
+            {
+                using var connection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+                await connection.ExecuteAsync("delete from users where id = @Id", new { Id = userId });
+                return Ok(await SelectAllUsers(connection));
+            }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+                
+            }
+           
+            
         }
         private static async Task<IEnumerable<User>> SelectAllUsers(SqlConnection connection)
         {
